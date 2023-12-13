@@ -1,9 +1,11 @@
 import argparse
 import os
 import sys
+import math
 from pathlib import Path
 import itertools
 import logging
+import random
 from copy import copy
 
 logging.basicConfig(
@@ -28,6 +30,9 @@ from infinigen.core.placement.camera import spawn_camera, set_active_camera
 from infinigen.core.nodes import Nodes, NodeWrangler
 from infinigen.core.util import blender as butil
 from infinigen.core.util.math import FixedSeed
+from infinigen.terrain import Terrain
+from infinigen.core.placement import density
+
 
 from infinigen.core import execute_tasks, surface, init
 
@@ -81,13 +86,56 @@ class MyAsset(AssetFactory):
 
         ## TODO: Implement a more complex procedural mesh
 
-        bpy.ops.mesh.primitive_torus_add(
-            major_segments=100,
-            minor_segments=50,
-            major_radius=self.params['major_radius'],
-            minor_radius=self.params['minor_radius']
-        )
+        # bpy.ops.mesh.primitive_torus_add(
+        #     major_segments=100,
+        #     minor_segments=50,
+        #     major_radius=self.params['major_radius'],
+        #     minor_radius=self.params['minor_radius']
+        # )
+        white_material = bpy.data.materials.new(name="white_material")
+        white_material.diffuse_color = (240/255, 240/255, 240/255, 1)  # RGB color for blue
+        main_branch_length = 1
+        num_branches = 3
+        branch_angle = math.radians(180)
+        branch_scale_factor = 0.7
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.03, depth=main_branch_length)
+        main_branch = bpy.context.active_object
+        def recur(main_branch, count):
+            num_branches = random.randint(0, 3)
+            radius_val = random.uniform(0.01, 0.03)
+            if count >= 6:
+                return
+            for i in range(num_branches):
+                bpy.ops.mesh.primitive_cylinder_add(radius=radius_val, depth=main_branch_length)
+                branch = bpy.context.active_object
+                branch.data.materials.append(white_material)
+
+                # Position the branch at the end of the main branch
+                branch.location.z = main_branch.location.z + 2 * main_branch.data.vertices[-1].co.z
+                old_angle = main_branch.rotation_euler.y
+                old_delta_x = math.sin(old_angle) * (main_branch_length / 2)
+                old_delta_z = (1 - math.cos(old_angle)) * (main_branch_length / 2)
+                branch.location.x = main_branch.location.x
+                branch.location.x += old_delta_x
+                branch.location.z -= old_delta_z
+                branch.location.y = 0
+                
+
+                # Rotate the branch
+                # branch.rotation_euler = main_branch.rotation_euler
+                # branch.rotation_euler.y += random.choice([-branch_angle, branch_angle])
+                rand_angle = random.uniform(-branch_angle, branch_angle)
+                branch.rotation_euler.y += rand_angle
+                delta_x = math.sin(rand_angle) * (main_branch_length / 2)
+                branch.location.x += delta_x
+                delta_z = (1 - math.cos(rand_angle)) * (main_branch_length / 2)
+                branch.location.z -= delta_z
+
+                recur(branch, count + 1)
+        recur(main_branch, 0)
+
         obj = bpy.context.active_object
+        
         bpy.ops.object.shade_smooth()
         
         surface.add_material(obj, my_shader, input_kwargs=dict(params=self.params))
@@ -106,11 +154,33 @@ def compose_scene(output_folder, scene_seed, overrides=None, **params):
     cam.rotation_euler = np.deg2rad((70, 0, 135))
     set_active_camera(cam)
 
+    # Add a green floor
+    add_green_floor()
+
     factory = MyAsset(factory_seed=np.random.randint(0, 1e7))
     if overrides is not None:
         factory.params.update(overrides)
 
     factory.spawn_asset(i=np.random.randint(0, 1e7))
+
+def add_green_floor():
+    # Create a plane (floor)
+    bpy.ops.mesh.primitive_plane_add(size=20, enter_editmode=False, align='WORLD', location=(0, 0, 0))
+    
+    # Create a blue material
+    green_material = bpy.data.materials.new(name="GreenMaterial")
+    green_material.diffuse_color = (134/255, 214/255, 216/255, 1)  # RGB color for blue
+
+    # Assign the material to the plane
+    bpy.context.active_object.data.materials.append(green_material)
+
+    # Set the plane to shade smooth
+    bpy.ops.object.shade_smooth()
+
+    # Move the plane to the bottom of the scene
+    bpy.context.active_object.location.z = 0
+    bpy.context.active_object.rotation_euler.x += math.radians(90)
+
 
 def iter_overrides(ranges):
     mid_vals = {k: v[len(v)//2] for k, v in ranges.items()}
