@@ -76,8 +76,10 @@ class MyAsset(AssetFactory):
 
             # TODO: Add more randomized parameters
 
-            'major_radius': np.random.uniform(1, 2),
-            'minor_radius': np.random.uniform(0.1, 1),
+            'length': np.random.uniform(0.5, 1.5),
+            'max_angle': np.random.uniform(45, 180),
+            'radius': np.random.uniform(0.005, 0.0075),
+            'max_branches': np.random.uniform(5, 7),
             'noise_scale': np.random.uniform(1, 20),
             'noise_distortion': np.random.uniform(0, 5),
         }
@@ -94,16 +96,15 @@ class MyAsset(AssetFactory):
         # )
         white_material = bpy.data.materials.new(name="white_material")
         white_material.diffuse_color = (240/255, 240/255, 240/255, 1)  # RGB color for blue
-        main_branch_length = 1
-        num_branches = 3
-        branch_angle = math.radians(180)
-        branch_scale_factor = 0.7
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.03, depth=main_branch_length)
+        main_branch_length = self.params['length']
+        max_branches = int(self.params['max_branches'])
+        max_angle = math.radians(self.params['max_angle'])
+        bpy.ops.mesh.primitive_cylinder_add(radius=self.params['radius'], depth=main_branch_length)
         main_branch = bpy.context.active_object
         def recur(main_branch, count):
-            num_branches = random.randint(0, 3)
-            radius_val = random.uniform(0.01, 0.03)
-            if count >= 6:
+            num_branches = random.randint(1, max_branches)
+            radius_val = self.params['radius']
+            if count >= 3:
                 return
             for i in range(num_branches):
                 bpy.ops.mesh.primitive_cylinder_add(radius=radius_val, depth=main_branch_length)
@@ -124,7 +125,7 @@ class MyAsset(AssetFactory):
                 # Rotate the branch
                 # branch.rotation_euler = main_branch.rotation_euler
                 # branch.rotation_euler.y += random.choice([-branch_angle, branch_angle])
-                rand_angle = random.uniform(-branch_angle, branch_angle)
+                rand_angle = random.uniform(-max_angle, max_angle)
                 branch.rotation_euler.y += rand_angle
                 delta_x = math.sin(rand_angle) * (main_branch_length / 2)
                 branch.location.x += delta_x
