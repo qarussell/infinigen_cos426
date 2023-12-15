@@ -24,6 +24,7 @@ from pprint import pformat
 import imageio
 
 from infinigen.assets.lighting import sky_lighting
+from infinigen.assets.scatters import pine_needle
 
 from infinigen.core.placement.factory import AssetFactory
 from infinigen.core.placement.camera import spawn_camera, set_active_camera
@@ -129,10 +130,10 @@ class MyAsset(AssetFactory):
 
             # TODO: Add more randomized parameters
 
-            'length': np.random.uniform(0.5, 1.5),
-            'max_angle': np.random.uniform(45, 180),
-            'radius': np.random.uniform(0.005, 0.0075),
-            'max_branches': np.random.uniform(5, 7),
+            'length': np.random.uniform(1, 1.5),
+            'max_angle': np.random.uniform(45, 75),
+            'radius': np.random.uniform(0.05, 0.07),
+            'max_branches': np.random.uniform(4, 6),
             'noise_scale': np.random.uniform(1, 20),
             'noise_distortion': np.random.uniform(0, 5),
         }
@@ -149,30 +150,28 @@ class MyAsset(AssetFactory):
         # )
 
 
-        bpy.ops.curve.primitive_bezier_curve_add(radius=1, location=(0, 0, 0))
+        # bpy.ops.curve.primitive_bezier_curve_add(radius=1, location=(0, 0, 0))
 
-        # Get the newly added curve object
-        curve_obj = bpy.context.active_object
+        # # Get the newly added curve object
+        # curve_obj = bpy.context.active_object
 
-        # Rotate the curve by -90 degrees around the Y axis
-        curve_obj.rotation_euler = (0, math.radians(-90), 0)
+        # # Rotate the curve by -90 degrees around the Y axis
+        # curve_obj.rotation_euler = (0, math.radians(-90), 0)
 
-        # Scale the curve
-        curve_obj.scale = (6, 2, 2)
+        # # Scale the curve
+        # curve_obj.scale = (6, 2, 2)
 
-        # Set the location of the curve
-        curve_obj.location = (0, 0, 3)
-        surface.add_geomod(bpy.context.active_object, lightning_geo)
+        # # Set the location of the curve
+        # curve_obj.location = (0, 0, 3)
+        # surface.add_geomod(bpy.context.active_object, lightning_geo)
 
-
-        white_material = bpy.data.materials.new(name="white_material")
-        white_material.diffuse_color = (240/255, 240/255, 240/255, 1)  # RGB color for blue
         main_branch_length = self.params['length']
         max_branches = int(self.params['max_branches'])
         max_angle = math.radians(self.params['max_angle'])
-        bpy.ops.mesh.primitive_cylinder_add(radius=self.params['radius'], depth=main_branch_length)
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.1, depth=main_branch_length)
         # surface.add_geomod(bpy.context.active_object, lightning_geo)
         main_branch = bpy.context.active_object
+        # pine_needle.apply(bpy.context.active_object)
         def recur(main_branch, count):
             num_branches = random.randint(1, max_branches)
             radius_val = self.params['radius']
@@ -182,7 +181,7 @@ class MyAsset(AssetFactory):
                 bpy.ops.mesh.primitive_cylinder_add(radius=radius_val, depth=main_branch_length)
                 # surface.add_geomod(bpy.context.active_object, lightning_geo)
                 branch = bpy.context.active_object
-                branch.data.materials.append(white_material)
+                # pine_needle.apply(bpy.context.active_object)
 
                 # Position the branch at the end of the main branch
                 branch.location.z = main_branch.location.z + 2 * main_branch.data.vertices[-1].co.z
@@ -204,7 +203,7 @@ class MyAsset(AssetFactory):
                 branch.location.x += delta_x
                 delta_z = (1 - math.cos(rand_angle)) * (main_branch_length / 2)
                 branch.location.z -= delta_z
-
+                
                 recur(branch, count + 1)
         recur(main_branch, 0)
 
