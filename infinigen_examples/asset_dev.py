@@ -39,41 +39,31 @@ from infinigen.core import execute_tasks, surface, init
 
 logging.basicConfig(level=logging.INFO)
 
+# Set ground color
 def ground_shader(nw: NodeWrangler):
-    # Code generated using version 2.6.5 of the node_transpiler
-
+    # Code generated using version 2.6.5 of the node_transpiler (Blender)
     noise_texture_1 = nw.new_node(Nodes.NoiseTexture, input_kwargs={'Scale': 14.8000, 'Roughness': 0.5375})
-    
     color_ramp = nw.new_node(Nodes.ColorRamp, input_kwargs={'Fac': noise_texture_1.outputs["Fac"]})
     color_ramp.color_ramp.interpolation = "CONSTANT"
     color_ramp.color_ramp.elements[0].position = 0.0000
     color_ramp.color_ramp.elements[0].color = [0.1093, 0.0845, 0.0596, 1.0000]
     color_ramp.color_ramp.elements[1].position = 0.6591
     color_ramp.color_ramp.elements[1].color = [0.0695, 0.0659, 0.0645, 1.0000]
-    
     principled_bsdf = nw.new_node(Nodes.PrincipledBSDF,
         input_kwargs={'Base Color': color_ramp.outputs["Color"], 'Subsurface Color': (0.0711, 0.0814, 0.8000, 1.0000), 'Roughness': 0.3659})
-    
     material_output = nw.new_node(Nodes.MaterialOutput, input_kwargs={'Surface': principled_bsdf}, attrs={'is_active_output': True})
 
-def ground_geometry(nw: NodeWrangler):
-    # Code generated using version 2.6.5 of the node_transpiler
-
+# Create ground geometry/texture
+def ground_geometry(nw: NodeWrangler, params: dict):
+    # Code generated using version 2.6.5 of the node_transpiler (Blender)
     group_input = nw.new_node(Nodes.GroupInput, expose_input=[('NodeSocketGeometry', 'Geometry', None)])
-    
     subdivide_mesh = nw.new_node(Nodes.SubdivideMesh, input_kwargs={'Mesh': group_input.outputs["Geometry"], 'Level': 6})
-    
     normal = nw.new_node(Nodes.InputNormal)
-    
     noise_texture = nw.new_node(Nodes.NoiseTexture,
         input_kwargs={'Scale': 2.9000, 'Detail': 0.8000, 'Roughness': 0.6042, 'Distortion': 2.6000})
-    
-    multiply = nw.new_node(Nodes.Math, input_kwargs={0: noise_texture.outputs["Fac"], 1: 1.0000}, attrs={'operation': 'MULTIPLY'})
-    
+    multiply = nw.new_node(Nodes.Math, input_kwargs={0: noise_texture.outputs["Fac"], 1: params['ground_noise_multiply']}, attrs={'operation': 'MULTIPLY'})
     scale = nw.new_node(Nodes.VectorMath, input_kwargs={0: normal, 'Scale': multiply}, attrs={'operation': 'SCALE'})
-    
     set_position = nw.new_node(Nodes.SetPosition, input_kwargs={'Geometry': subdivide_mesh, 'Offset': scale.outputs["Vector"]})
-    
     group_output = nw.new_node(Nodes.GroupOutput, input_kwargs={'Geometry': set_position}, attrs={'is_active_output': True})
 
 def my_shader(nw: NodeWrangler, params: dict):
@@ -87,33 +77,45 @@ def my_shader(nw: NodeWrangler, params: dict):
             'Distortion': params['noise_distortion']
         }
     )
-    
     principled_bsdf = nw.new_node(Nodes.PrincipledBSDF, input_kwargs={'Base Color': noise_texture.outputs["Color"]})
-    
-    normal = nw.new_node('ShaderNodeNormal')
-    
+    normal = nw.new_node('ShaderNodeNormal')   
     displacement = nw.new_node('ShaderNodeDisplacement',
         input_kwargs={'Height': noise_texture.outputs["Fac"], 'Scale': 0.02, 'Normal': normal.outputs["Normal"]})
-    
     material_output = nw.new_node(Nodes.MaterialOutput,
         input_kwargs={'Surface': principled_bsdf, 'Displacement': displacement},
         attrs={'is_active_output': True})
 
-def lightning_geo(nw: NodeWrangler):
-    # Code generated using version 2.6.5 of the node_transpiler
+# Set leaf color
+def leaf_shader(nw: NodeWrangler):
+    # Code generated using version 2.6.5 of the node_transpiler (Blender)
+    principled_bsdf = nw.new_node(Nodes.PrincipledBSDF, input_kwargs={'Base Color': (0.8000, 0.2148, 0.6995, 1.0000)})
+    material_output = nw.new_node(Nodes.MaterialOutput, input_kwargs={'Surface': principled_bsdf}, attrs={'is_active_output': True})
 
+# Set branch color
+def branch_shader(nw: NodeWrangler):
+    # Code generated using version 2.6.5 of the node_transpiler (Blender)
+    principled_bsdf = nw.new_node(Nodes.PrincipledBSDF,
+        input_kwargs={'Base Color': (0.0152, 0.0086, 0.0037, 1.0000), 'Roughness': 0.6818, 'Anisotropic Rotation': 0.4227, 'Sheen Tint': 0.2636, 'Clearcoat Roughness': 0.4164, 'IOR': 13.8500, 'Transmission Roughness': 0.3909})
+    material_output = nw.new_node(Nodes.MaterialOutput, input_kwargs={'Surface': principled_bsdf}, attrs={'is_active_output': True})
+
+# Create branch geometry/texture
+def branch_geometry(nw: NodeWrangler, params: dict):
+    # Code generated using version 2.6.5 of the node_transpiler (Blender)
     group_input = nw.new_node(Nodes.GroupInput, expose_input=[('NodeSocketGeometry', 'Geometry', None)])
-    
-    curve_circle = nw.new_node(Nodes.CurveCircle, input_kwargs={'Resolution': 34, 'Radius': 0.0200})
-    
-    curve_to_mesh = nw.new_node(Nodes.CurveToMesh,
-        input_kwargs={'Curve': group_input.outputs["Geometry"], 'Profile Curve': curve_circle.outputs["Curve"]})
-    
-    noise_texture = nw.new_node(Nodes.NoiseTexture, input_kwargs={'Roughness': 0.0000})
-    
-    set_position = nw.new_node(Nodes.SetPosition, input_kwargs={'Geometry': curve_to_mesh, 'Offset': noise_texture.outputs["Fac"]})
-    
-    group_output = nw.new_node(Nodes.GroupOutput, input_kwargs={'Geometry': set_position}, attrs={'is_active_output': True})
+    distribute_points_on_faces = nw.new_node(Nodes.DistributePointsOnFaces,
+        input_kwargs={'Mesh': group_input.outputs["Geometry"], 'Density': params['leaf_density']})
+    object_info = nw.new_node(Nodes.ObjectInfo, input_kwargs={'Object': bpy.data.objects['Sphere']})
+    instance_on_points = nw.new_node(Nodes.InstanceOnPoints,
+        input_kwargs={'Points': distribute_points_on_faces.outputs["Points"], 'Instance': object_info.outputs["Geometry"], 'Rotation': distribute_points_on_faces.outputs["Rotation"]})
+    normal = nw.new_node(Nodes.InputNormal)
+    noise_texture = nw.new_node(Nodes.NoiseTexture,
+        input_kwargs={'Scale': -6.1000, 'Detail': 0.0000, 'Roughness': 1.0000, 'Distortion': 7.0000})
+    multiply = nw.new_node(Nodes.Math, input_kwargs={0: 0.1000, 1: noise_texture.outputs["Fac"]}, attrs={'operation': 'MULTIPLY'})
+    scale = nw.new_node(Nodes.VectorMath, input_kwargs={0: normal, 'Scale': multiply}, attrs={'operation': 'SCALE'})
+    set_position = nw.new_node(Nodes.SetPosition,
+        input_kwargs={'Geometry': group_input.outputs["Geometry"], 'Offset': scale.outputs["Vector"]})
+    join_geometry = nw.new_node(Nodes.JoinGeometry, input_kwargs={'Geometry': [instance_on_points, set_position]})
+    group_output = nw.new_node(Nodes.GroupOutput, input_kwargs={'Geometry': join_geometry}, attrs={'is_active_output': True})
 
 class MyAsset(AssetFactory):
 
@@ -132,46 +134,38 @@ class MyAsset(AssetFactory):
 
             'length': np.random.uniform(1, 1.5),
             'max_angle': np.random.uniform(45, 75),
-            'radius': np.random.uniform(0.05, 0.07),
-            'max_branches': np.random.uniform(4, 6),
-            'noise_scale': np.random.uniform(1, 20),
-            'noise_distortion': np.random.uniform(0, 5),
+            'radius': np.random.uniform(0.02, 0.04),
+            'max_branches': np.random.uniform(3, 4),
+            'ground_noise_multiply': np.random.uniform(-2, 1),
+            'leaf_density': np.random.uniform(7, 14),
+
         }
 
     def create_asset(self, **_):
 
         ## TODO: Implement a more complex procedural mesh
 
-        # bpy.ops.mesh.primitive_torus_add(
-        #     major_segments=100,
-        #     minor_segments=50,
-        #     major_radius=self.params['major_radius'],
-        #     minor_radius=self.params['minor_radius']
-        # )
-
-
-        # bpy.ops.curve.primitive_bezier_curve_add(radius=1, location=(0, 0, 0))
-
-        # # Get the newly added curve object
-        # curve_obj = bpy.context.active_object
-
-        # # Rotate the curve by -90 degrees around the Y axis
-        # curve_obj.rotation_euler = (0, math.radians(-90), 0)
-
-        # # Scale the curve
-        # curve_obj.scale = (6, 2, 2)
-
-        # # Set the location of the curve
-        # curve_obj.location = (0, 0, 3)
-        # surface.add_geomod(bpy.context.active_object, lightning_geo)
-
+        # Set up initial branch parameters
         main_branch_length = self.params['length']
         max_branches = int(self.params['max_branches'])
         max_angle = math.radians(self.params['max_angle'])
+
+        # Set up initial leaf
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(0, 0, 0))
+        sphere_object = bpy.context.active_object
+        surface.add_material(bpy.context.active_object, leaf_shader)
+        sphere_object.name = "Sphere"
+        sphere_object.location = (2.3006, 0.044221, -1)
+        sphere_object.scale = (0.34, 0.12, 0.04)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+        # Create initial (main) branch
         bpy.ops.mesh.primitive_cylinder_add(radius=0.1, depth=main_branch_length)
-        # surface.add_geomod(bpy.context.active_object, lightning_geo)
+        surface.add_geomod(bpy.context.active_object, branch_geometry, input_kwargs=dict(params=self.params))
+        surface.add_material(bpy.context.active_object, branch_shader)
         main_branch = bpy.context.active_object
-        # pine_needle.apply(bpy.context.active_object)
+
+        # Recursively add branches to the end of the main branch
         def recur(main_branch, count):
             num_branches = random.randint(1, max_branches)
             radius_val = self.params['radius']
@@ -179,9 +173,7 @@ class MyAsset(AssetFactory):
                 return
             for i in range(num_branches):
                 bpy.ops.mesh.primitive_cylinder_add(radius=radius_val, depth=main_branch_length)
-                # surface.add_geomod(bpy.context.active_object, lightning_geo)
                 branch = bpy.context.active_object
-                # pine_needle.apply(bpy.context.active_object)
 
                 # Position the branch at the end of the main branch
                 branch.location.z = main_branch.location.z + 2 * main_branch.data.vertices[-1].co.z
@@ -195,22 +187,22 @@ class MyAsset(AssetFactory):
                 
 
                 # Rotate the branch
-                # branch.rotation_euler = main_branch.rotation_euler
-                # branch.rotation_euler.y += random.choice([-branch_angle, branch_angle])
                 rand_angle = random.uniform(-max_angle, max_angle)
                 branch.rotation_euler.y += rand_angle
                 delta_x = math.sin(rand_angle) * (main_branch_length / 2)
                 branch.location.x += delta_x
                 delta_z = (1 - math.cos(rand_angle)) * (main_branch_length / 2)
                 branch.location.z -= delta_z
+
+                # Add shader and geometry
+                surface.add_geomod(bpy.context.active_object, branch_geometry, input_kwargs=dict(params=self.params))
+                surface.add_material(bpy.context.active_object, branch_shader)
                 
                 recur(branch, count + 1)
+            
         recur(main_branch, 0)
-
         obj = bpy.context.active_object
-        
         bpy.ops.object.shade_smooth()
-       
         
         return obj
 
@@ -226,23 +218,21 @@ def compose_scene(output_folder, scene_seed, overrides=None, **params):
     cam.rotation_euler = np.deg2rad((80, 0, -44))
     set_active_camera(cam)
 
-    # Add a green floor
-    add_green_floor()
-
     factory = MyAsset(factory_seed=np.random.randint(0, 1e7))
     if overrides is not None:
         factory.params.update(overrides)
 
     factory.spawn_asset(i=np.random.randint(0, 1e7))
+    add_green_floor(factory.params)
 
-def add_green_floor():
+def add_green_floor(params):
     # Create a plane (floor)
     bpy.ops.mesh.primitive_plane_add(size=20, enter_editmode=False, align='WORLD', location=(0, 0, 0))
 
     # Move the plane to the bottom of the scene
     bpy.context.active_object.location.z = 0
 
-    surface.add_geomod(bpy.context.active_object, ground_geometry)
+    surface.add_geomod(bpy.context.active_object, ground_geometry, input_kwargs=dict(params=params))
     surface.add_material(bpy.context.active_object, ground_shader)
     
     # Set the plane to shade smooth
@@ -260,10 +250,12 @@ def iter_overrides(ranges):
 def create_param_demo(args, seed):
 
     override_ranges = {
-        'major_radius': np.linspace(1, 2, num=3),
-        'minor_radius': np.linspace(0.1, 1, num=3),
-        'noise_scale': np.linspace(1, 20, num=3),
-        'noise_distortion': np.linspace(0, 5, num=3),
+        'length': np.linspace(1, 1.5, num=3),
+        'max_angle': np.linspace(45, 75, num=3),
+        'radius': np.linspace(0.02, 0.04, num=3),
+        'max_branches': np.linspace(3, 4, num=3),
+        'ground_noise_multiply': np.linspace(-2, 1, num=3),
+        'leaf_density': np.linspace(7, 14, num=3),
     }
     for i, overrides in enumerate(iter_overrides(override_ranges)):
         
