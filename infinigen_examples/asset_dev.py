@@ -223,9 +223,9 @@ def compose_scene(output_folder, scene_seed, overrides=None, **params):
         factory.params.update(overrides)
 
     factory.spawn_asset(i=np.random.randint(0, 1e7))
-    add_green_floor(factory.params)
+    add_ground(factory.params)
 
-def add_green_floor(params):
+def add_ground(params):
     # Create a plane (floor)
     bpy.ops.mesh.primitive_plane_add(size=20, enter_editmode=False, align='WORLD', location=(0, 0, 0))
 
